@@ -1,0 +1,46 @@
+{
+  "id": "org.bioe234.function.seq.reverse_complement.v1",
+  "name": "DNA Reverse Complement",
+  "description": "Return the reverse complement of a DNA or RNA sequence. Supports standard bases and IUPAC ambiguity codes (R, Y, S, W, K, M, N).",
+  "type": "function",
+  "keywords": ["DNA", "RNA", "reverse complement", "sequence", "IUPAC"],
+  "date_created": null,
+  "date_last_modified": null,
+
+  "inputs": [
+    {
+      "name": "seq",
+      "type": "string",
+      "description": "DNA or RNA sequence. Accepts a resource name (e.g. 'pBR322'), a raw sequence string (e.g. 'ATGCGATCG'), a FASTA-formatted string, or a GenBank-formatted string. The framework resolves resource names and file formats automatically before passing the clean sequence to this function."
+    }
+  ],
+
+  "outputs": [
+    {
+      "type": "string",
+      "description": "Reverse complement of the input sequence, returned as an uppercase string of the same length."
+    }
+  ],
+
+  "examples": [
+    {
+      "input":  { "seq": "ATGC" },
+      "output": { "result": "GCAT" }
+    },
+    {
+      "input":  { "seq": "ATGCGATCG" },
+      "output": { "result": "CGATCGCAT" }
+    }
+  ],
+
+  "execution_details": {
+    "language": "Python",
+    "source": "modules/seq_basics/tools/reverse_complement.py",
+    "initialization": "initiate",
+    "execution": "run",
+    "disposal": null,
+
+    "mcp_name": "dna_reverse_complement",
+    "seq_params": ["seq"]
+  }
+}

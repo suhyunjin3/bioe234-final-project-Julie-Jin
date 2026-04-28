@@ -1,0 +1,68 @@
+{
+  "id": "org.bioe234.function.seq.translate.v1",
+  "name": "DNA to Protein Translation",
+  "description": "Translate a DNA sequence to a protein sequence using the standard genetic code. Supports optional coordinate slicing and reading frame selection (1, 2, or 3).",
+  "type": "function",
+  "keywords": ["DNA", "protein", "translation", "codon", "reading frame", "sequence"],
+  "date_created": null,
+  "date_last_modified": null,
+
+  "inputs": [
+    {
+      "name": "seq",
+      "type": "string",
+      "description": "DNA sequence. Accepts a resource name (e.g. 'pBR322'), a raw sequence string, a FASTA-formatted string, or a GenBank-formatted string. The framework resolves these automatically before passing the clean sequence to this function."
+    },
+    {
+      "name": "start",
+      "type": "integer",
+      "optional": true,
+      "description": "0-indexed start position within the sequence. If omitted, translation begins at the start of the sequence."
+    },
+    {
+      "name": "end",
+      "type": "integer",
+      "optional": true,
+      "description": "End position (exclusive). If omitted, translation continues to the end of the sequence."
+    },
+    {
+      "name": "frame",
+      "type": "integer",
+      "optional": true,
+      "description": "Reading frame: 1, 2, or 3. Frame 1 starts at the first base, frame 2 at the second, frame 3 at the third. Defaults to 1."
+    }
+  ],
+
+  "outputs": [
+    {
+      "type": "string",
+      "description": "Protein sequence as single-letter amino acid codes. Stop codons are shown as '*'. Unrecognised codons are shown as 'X'."
+    }
+  ],
+
+  "examples": [
+    {
+      "input":  { "seq": "ATGGCT" },
+      "output": { "result": "MA" }
+    },
+    {
+      "input":  { "seq": "AATGGCTAAA", "start": 1, "frame": 1 },
+      "output": { "result": "MAK" }
+    },
+    {
+      "input":  { "seq": "AATGGCT", "frame": 2 },
+      "output": { "result": "MA" }
+    }
+  ],
+
+  "execution_details": {
+    "language": "Python",
+    "source": "modules/seq_basics/tools/translate.py",
+    "initialization": "initiate",
+    "execution": "run",
+    "disposal": null,
+
+    "mcp_name": "dna_translate",
+    "seq_params": ["seq"]
+  }
+}
