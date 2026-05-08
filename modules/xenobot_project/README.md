@@ -84,17 +84,28 @@ Trace interpretation:
 Cell dict schema:
  
 ```python
+<<<<<<< HEAD
 {"promoter":str, # "J23100", "J23106", "J23114", "custom" (required)
   "direction_x":float, # motor direction unit vector x (default 1.0)
   "direction_y":float, # motor direction unit vector y (default 0.0)
   "label":str, # plot legend label (optional)
   "k_synth":float} # synthesis rate override for "custom" (optional)
+=======
+{
+    "promoter":    str,    # "J23100" | "J23106" | "J23114" | "custom"   (required)
+    "direction_x": float,  # motor direction unit vector x               (default 1.0)
+    "direction_y": float,  # motor direction unit vector y               (default 0.0)
+    "label":       str,    # plot legend label                           (optional)
+    "k_synth":     float,  # synthesis rate override for "custom"        (optional)
+}
+>>>>>>> 3f77ac4163484a72769d538baf7ca76bcd546606
 ```
  
 ## Project Structure
  
 ```
 modules/xenobot_project/
+<<<<<<< HEAD
 ├── SKILL.md # Gemini domain guidance with promoter library and design patterns
 ├── README.md # This file describing project
 └── tools/
@@ -102,6 +113,15 @@ modules/xenobot_project/
     ├── xenobot_sim.json # C9 function wrapper: schema, typed I/O, MCP entry points
     ├── prompts.json # Evaluation prompts with expected_tool and expected_args
     └── test_xenobot.py # pytest validation suite
+=======
+├── SKILL.md               # Gemini domain guidance with promoter library and design patterns
+├── README.md              # This file describing project
+└── tools/
+    ├── xenobot_sim.py     # XenobotSim: Gillespie SSA + Euler kinematic integrator
+    ├── xenobot_sim.json   # C9 function wrapper: schema, typed I/O, MCP entry points
+    ├── prompts.json       # Evaluation prompts with expected_tool and expected_args
+    └── test_xenobot.py    # pytest validation suite
+>>>>>>> 3f77ac4163484a72769d538baf7ca76bcd546606
 ```
  
 ## Future Directions
