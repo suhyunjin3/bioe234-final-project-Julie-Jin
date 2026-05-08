@@ -12,7 +12,7 @@ arrangement. The findings showed that the spatial configuration of two wild-type
 Subsequent developments expanded xenobot functionality toward genetic programming.
 Fluorescent reporters like GFP allowed confirming cell identity and viability within constructs. Molecular memory circuits with site-specific recombinase that permanently rearrange a DNA cassette after sensing an environmental stimulus, allowed xenobots to record and retain information about their chemical surroundings. These advances showed that xenobots can be a receptive platform to integrate synthetic circuits that affect cellular behavior.
  
-This CAD tool extends these foundational findings by introducing gene expression as a design variable. While the original models assumed fixed cardiac contractility, this tool allows researchers to specify synthetic promoters driving the expression of motor proteins at a customizable level (low/medium/high). 
+This CAD tool extends these findings by introducing gene expression as a design variable. While the original models assumed fixed cardiac contractility, this tool allows researchers to specify synthetic promoters driving the expression of motor proteins at a customizable level (low/medium/high). 
 
 ## Contractility as a Tunable Design Variable
  
@@ -24,7 +24,7 @@ Graded MLCK regulation under conditional promoter control produces proportional 
  
 ### Key Components
  
-- Gillespie SSA (Gillespie, 1977) for stochastic biochemical simulation of enzyme production per cell - Propensity $a_j = k_j \times \prod[\text{reactants}]$; $a_j \propto$ Promoter Strength 
+- Gillespie SSA (Gillespie, 1977) for stochastic biochemical simulation of enzyme production per cell - Propensity $a_j = k_j \times \prod[\text{reactants}]$, $a_j \propto$ Promoter Strength 
 - Reaction network for elemental reactions governing [E] and [S] per cell - `∅ →[k_synth]→ E` · `E →[k_deg]→ ∅` · `E+S →[k_cat]→ E+∅` 
 - ATP flux (Metabolic Trace) for first-order catalysis depleting substrate S - Propensity $a_2 = k_\text{cat} \times E$; S decrements per catalytic event
 - Force coupling for mean enzyme count to motor force - $F = F_\text{base} \times \langle E \rangle / E_\text{ref}$ 
