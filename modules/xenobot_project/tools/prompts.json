@@ -1,37 +1,85 @@
 [
   {
-    "prompt": "Simulate a xenobot made of two cilia cells with motor vectors (1.0, 0.5) and (0.5, 1.0) over 30 steps with noise 0.05, and show the trajectory plot.",
+    "prompt": "Simulate a two-cell walker using the J23100 strong promoter, both cells pointing forward along the x-axis.",
     "expected_tool": "simulate_xenobot_kinematics",
     "expected_args": {
       "cells": [
-        {"motor_x": 1.0, "motor_y": 0.5, "label": "cilia_cell_1"},
-        {"motor_x": 0.5, "motor_y": 1.0, "label": "cilia_cell_2"}
-      ],
-      "steps": 30,
-      "noise": 0.05
-    }
-  },
-  {
-    "prompt": "What happens when two xenobot cells have exactly opposing motor forces? Use motor_x=1.0, motor_y=0.0 and motor_x=-1.0, motor_y=0.0 with no noise over 20 steps.",
-    "expected_tool": "simulate_xenobot_kinematics",
-    "expected_args": {
-      "cells": [
-        {"motor_x": 1.0, "motor_y": 0.0, "label": "forward_cell"},
-        {"motor_x": -1.0, "motor_y": 0.0, "label": "reverse_cell"}
-      ],
-      "steps": 20,
-      "noise": 0.0
-    }
-  },
-  {
-    "prompt": "Run a single-cell xenobot simulation with motor_x=2.0 and motor_y=0.5 for 50 steps.",
-    "expected_tool": "simulate_xenobot_kinematics",
-    "expected_args": {
-      "cells": [
-        {"motor_x": 2.0, "motor_y": 0.5, "label": "solo_cell"}
+        {
+          "promoter": "J23100",
+          "direction_x": 1.0,
+          "direction_y": 0.0,
+          "label": "cell_0"
+        },
+        {
+          "promoter": "J23100",
+          "direction_x": 1.0,
+          "direction_y": 0.0,
+          "label": "cell_1"
+        }
       ],
       "steps": 50,
       "noise": 0.05
+    }
+  },
+  {
+    "prompt": "Run the same two-cell walker but replace the J23100 promoter with J23114 to observe increased molecular noise from weak expression.",
+    "expected_tool": "simulate_xenobot_kinematics",
+    "expected_args": {
+      "cells": [
+        {
+          "promoter": "J23114",
+          "direction_x": 1.0,
+          "direction_y": 0.0,
+          "label": "cell_0"
+        },
+        {
+          "promoter": "J23114",
+          "direction_x": 1.0,
+          "direction_y": 0.0,
+          "label": "cell_1"
+        }
+      ],
+      "steps": 50,
+      "noise": 0.05
+    }
+  },
+  {
+    "prompt": "Design a construct that maximizes displacement while starting with a limited ATP pool of 500 molecules.",
+    "expected_tool": "simulate_xenobot_kinematics",
+    "expected_args": {
+      "cells": [
+        {
+          "promoter": "J23100",
+          "direction_x": 1.0,
+          "direction_y": 0.0,
+          "label": "motor_cell"
+        }
+      ],
+      "steps": 50,
+      "noise": 0.05,
+      "atp_init": 500
+    }
+  },
+  {
+    "prompt": "Compare the phenotypic traces of a J23100 strong-promoter construct versus a J23106 medium-promoter construct, both driving a single rightward motor cell.",
+    "expected_tool": "simulate_xenobot_kinematics",
+    "expected_args": {
+      "cells": [
+        {
+          "promoter": "J23100",
+          "direction_x": 1.0,
+          "direction_y": 0.0,
+          "label": "strong_J23100"
+        },
+        {
+          "promoter": "J23106",
+          "direction_x": 1.0,
+          "direction_y": 0.0,
+          "label": "medium_J23106"
+        }
+      ],
+      "steps": 50,
+      "noise": 0.0
     }
   }
 ]

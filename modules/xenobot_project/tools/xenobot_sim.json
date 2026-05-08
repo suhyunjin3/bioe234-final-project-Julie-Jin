@@ -1,19 +1,22 @@
 {
-  "id": "org.c9.function.biology.biophysics.xenobot_kinematics_simulator.v1",
-  "name": "Xenobot Kinematics Simulator",
-  "description": "Simulates the collective kinematics of xenobot-inspired multicellular constructs. Each cell is represented by an (motor_x, motor_y) force vector; the simulator integrates individual trajectories over configurable steps using NumPy vector addition, computes net centroid displacement, and returns a dual-panel matplotlib trajectory plot encoded as a base64 PNG alongside a plain-text summary.",
+  "id": "org.c9.function.biology.biophysics.xenobot_kinematics_simulator.v2",
+  "name": "Xenobot Kinematics Simulator (Gillespie Engine)",
+  "description": "Simulates xenobot locomotion using a two-layer coupled model. Layer 1 runs the Gillespie Stochastic Simulation Algorithm (SSA) to model enzyme production inside each motor cell, where the promoter strength (J23100/J23106/J23114 from the Anderson J23 series) determines the synthesis rate k_synth and thus the mean enzyme count ⟨E⟩. Layer 2 uses the derived motor force (proportional to ⟨E⟩) as the input to a 2D Euler kinematic integrator to produce a trajectory. Both the biochemical time-course (enzyme + ATP traces) and the physical trajectory are plotted and saved. This replaces the v1 hardcoded motor vectors with biochemistry-derived forces, closing the design gap between promoter selection and macroscale locomotion.",
   "type": "function",
   "keywords": [
     "xenobot",
     "kinematics",
-    "simulation",
-    "multicellular",
-    "biophysics",
-    "trajectory",
-    "motor-cell",
-    "displacement",
-    "matplotlib",
-    "numpy",
+    "Gillespie",
+    "stochastic simulation",
+    "promoter",
+    "J23100",
+    "J23106",
+    "J23114",
+    "Michaelis-Menten",
+    "enzyme kinetics",
+    "ATP",
+    "metabolic load",
+    "synthetic biology",
     "BioE234"
   ],
   "date_created": "2026-04-28T00:00:00Z",
@@ -22,45 +25,57 @@
     {
       "name": "cells",
       "type": "list[dict]",
-      "description": "List of cell configuration dicts. Each dict must contain 'motor_x' (float, µm/step) and 'motor_y' (float, µm/step). An optional 'label' (str) key sets the legend entry for that cell."
+      "description": "List of cell configuration dicts. Each must contain 'promoter' (str): one of 'J23100' (High, k_synth=2.5), 'J23106' (Medium, k_synth=1.175), 'J23114' (Low, k_synth=0.25), or 'custom'. Optional fields: 'direction_x' (float, default 1.0), 'direction_y' (float, default 0.0), 'label' (str), 'k_synth' (float, only used when promoter='custom')."
     },
     {
       "name": "steps",
       "type": "int",
-      "description": "Number of simulation time-steps to integrate. Defaults to 50."
+      "description": "Number of kinematic Euler integration steps. Defaults to 50."
     },
     {
       "name": "noise",
       "type": "float",
-      "description": "Standard deviation (µm) of Gaussian noise injected per cell per step. Defaults to 0.05."
+      "description": "Gaussian noise standard deviation (µm/step) added to each cell at each kinematic step. Defaults to 0.05."
+    },
+    {
+      "name": "gillespie_t_end",
+      "type": "float",
+      "description": "Duration of the biochemical Gillespie simulation in milliseconds. Longer duration allows more enzyme accumulation. Defaults to 10.0."
+    },
+    {
+      "name": "base_motor",
+      "type": "float",
+      "description": "Maximum motor force in µm/step, achieved when ⟨E⟩ ≥ E_ref (20 molecules). Actual force = min(base_motor, base_motor × ⟨E⟩/20). Defaults to 2.0."
+    },
+    {
+      "name": "atp_init",
+      "type": "int",
+      "description": "Initial number of ATP substrate molecules available to each cell. Models metabolic load — lower values limit catalytic activity. Defaults to 500."
     }
   ],
   "outputs": [
     {
       "type": "dict",
-      "description": "A dictionary with a 'content' key containing a list of two blocks: [0] a text block with the plain-text simulation summary (cell count, steps, net motor vector, net displacement, final centroid position); [1] an image block with 'data' (base64-encoded PNG) and 'media_type' ('image/png') of the dual-panel trajectory plot."
+      "description": "A dictionary with a 'content' key containing one text block: a summary string reporting promoter identities, k_synth values, mean enzyme counts ⟨E⟩, ATP depletion, derived motor forces, net motor vector, net displacement, and the path to the saved PNG plot (dual-panel: trajectory + per-cell biochemical traces)."
     }
   ],
   "examples": [
     {
       "input": {
         "cells": [
-          {"motor_x": 1.0, "motor_y": 0.5, "label": "cilia_cell"},
-          {"motor_x": 0.5, "motor_y": 1.0, "label": "passive_cell"}
+          {"promoter": "J23100", "direction_x": 1.0, "direction_y": 0.0, "label": "anterior_motor"},
+          {"promoter": "J23114", "direction_x": 1.0, "direction_y": 0.0, "label": "posterior_skin"}
         ],
-        "steps": 30,
-        "noise": 0.05
+        "steps": 50,
+        "noise": 0.05,
+        "gillespie_t_end": 10.0,
+        "atp_init": 500
       },
       "output": {
         "content": [
           {
             "type": "text",
-            "text": "Xenobot simulation complete.\n  Cells: 2  |  Steps: 30  |  Noise σ: 0.05 µm\n  Net motor vector: (1.500, 1.500) µm/step\n  Net displacement (centroid): 63.2 µm\n  Final centroid position: (44.7, 44.8) µm"
-          },
-          {
-            "type": "image",
-            "data": "<base64-encoded PNG>",
-            "media_type": "image/png"
+            "text": "Xenobot Gillespie simulation complete.\n  Cells: 2  |  Kinematic steps: 50  |  Noise σ: 0.05 µm\n  Net displacement (centroid): ~35 µm\n  [0] anterior_motor  promoter=J23100 (High)  ⟨E⟩≈9.6  motor_force≈0.96 µm/step\n  [1] posterior_skin  promoter=J23114 (Low)   ⟨E⟩≈2.4  motor_force≈0.24 µm/step"
           }
         ]
       }
@@ -68,22 +83,17 @@
     {
       "input": {
         "cells": [
-          {"motor_x": 1.0, "motor_y": 0.0},
-          {"motor_x": -1.0, "motor_y": 0.0}
+          {"promoter": "J23106", "direction_x": 0.707, "direction_y": 0.707, "label": "diagonal_cell"}
         ],
-        "steps": 10,
-        "noise": 0.0
+        "steps": 30,
+        "noise": 0.0,
+        "gillespie_t_end": 15.0
       },
       "output": {
         "content": [
           {
             "type": "text",
-            "text": "Xenobot simulation complete.\n  Cells: 2  |  Steps: 10  |  Noise σ: 0.0 µm\n  Net motor vector: (0.000, 0.000) µm/step\n  Net displacement (centroid): 0.0000 µm\n  Final centroid position: (0.000, 0.000) µm"
-          },
-          {
-            "type": "image",
-            "data": "<base64-encoded PNG>",
-            "media_type": "image/png"
+            "text": "Xenobot Gillespie simulation complete.\n  Cells: 1  |  Kinematic steps: 30  |  Noise σ: 0.0 µm\n  Net displacement (centroid): ~20 µm diagonal"
           }
         ]
       }
@@ -96,10 +106,6 @@
     "execution": "run",
     "disposal": null,
     "mcp_name": "simulate_xenobot_kinematics",
-    "seq_params": {
-      "cells": "cells",
-      "steps": "steps",
-      "noise": "noise"
-    }
+    "seq_params": {}
   }
 }
