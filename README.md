@@ -97,13 +97,13 @@ Cell dict schema:
  
 ```
 modules/xenobot_project/
-├── SKILL.md               # Gemini domain guidance — promoter library, design patterns
-├── README.md              # This file
+├── SKILL.md               # Gemini domain guidance with promoter library and design patterns
+├── README.md              # This file describing project
 └── tools/
-    ├── xenobot_sim.py     # XenobotSim — Gillespie SSA + Euler kinematic integrator
-    ├── xenobot_sim.json   # C9 function wrapper — schema, typed I/O, MCP entry points
+    ├── xenobot_sim.py     # XenobotSim: Gillespie SSA + Euler kinematic integrator
+    ├── xenobot_sim.json   # C9 function wrapper: schema, typed I/O, MCP entry points
     ├── prompts.json       # Evaluation prompts with expected_tool and expected_args
-    └── test_xenobot.py    # pytest validation suite (no server or API key required)
+    └── test_xenobot.py    # pytest validation suite
 ```
  
 ## Future Directions
