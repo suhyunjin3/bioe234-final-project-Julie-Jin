@@ -12,7 +12,7 @@ arrangement. The findings showed that the spatial configuration of two wild-type
 Subsequent developments expanded xenobot functionality toward genetic programming.
 Fluorescent reporters like GFP allowed confirming cell identity and viability within constructs. Molecular memory circuits with site-specific recombinase that permanently rearrange a DNA cassette after sensing an environmental stimulus, allowed xenobots to record and retain information about their chemical surroundings. These advances showed that xenobots can be a receptive platform to integrate synthetic circuits that affect cellular behavior.
  
-This CAD tool is an extension to these findings, where instead of having a fixed cardiac contractility, it shows synthetic promoters driving the expression of motor proteins at a customizable level (low/medium/high). 
+This CAD tool platform extends these foundational findings by introducing gene expression as a design variable. While the original models assumed fixed cardiac contractility, this tool allows researchers to specify synthetic promoters driving the expression of motor proteins at a customizable level (low/medium/high). 
 
 ## Contractility as a Tunable Design Variable
  
