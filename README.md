@@ -1,113 +1,527 @@
-## BIOE 234 Final Project: CAD Tool for Xenobot Design
- 
-This CAD platform is a model for synthetic biologists designing xenobot locomotion.
-A researcher specifies the promoters driving motor enzyme expression in each cell of a construct, and the simulator derives the resulting
-phenotype: a spatial trajectory, a biochemical time series for each cell, and a metabolic consumption trace showing ATP flux over time. The tool allows researchers to select genetic parts and simulate it before fabrcation and see if a genetic construct is energetically efficient enough to reach a behavioral target before metabolic depletion.
+# BioE234 MCP Starter — Student Guide
 
-## Motivation
- 
-Xenobots were first described by Kriegman, Blackiston, Levin, and Bongard (2020) as sculpted living machines assembled from frog stem cells through microsurgical
-arrangement. The findings showed that the spatial configuration of two wild-type cell types (contracting cardiac progenitors and passive epithelial cells) was sufficient to determine emergent locomotive behavior, selected computationally by an evolutionary algorithm scoring designs on net displacement. The motor force was not a design variable.
- 
-Subsequent developments expanded xenobot functionality toward genetic programming.
-Fluorescent reporters like GFP allowed confirming cell identity and viability within constructs. Molecular memory circuits with site-specific recombinase that permanently rearrange a DNA cassette after sensing an environmental stimulus, allowed xenobots to record and retain information about their chemical surroundings. These advances showed that xenobots can be a receptive platform to integrate synthetic circuits that affect cellular behavior.
- 
-This CAD tool extends these findings by introducing gene expression as a design variable. While the original models assumed fixed cardiac contractility, this tool allows researchers to specify synthetic promoters driving the expression of motor proteins at a customizable level (low/medium/high). 
+Welcome! This document is the **primary reference** for the final project starter.  
+Read it top to bottom once before writing any code.
 
-## Contractility as a Tunable Design Variable
- 
-Contractile force effector (MLCK) - The RhoA/ROCK → MLCK → myosin phosphorylation cascade is the downstream translator of gene expression into mechanical force. 
+---
 
-Graded MLCK regulation under conditional promoter control produces proportional changes in traction force and migration velocity (Surcel et al., 2015). In the simulator, motor enzyme `E` proxies for MLCK. The encoded relationship is: Promoter (J23100 → J23114)  →  k_synth  →  `⟨E⟩`  →  F_motor  →  change in displacement
- 
-## Simulation Engine
- 
-### Key Components
- 
-- Gillespie SSA (Gillespie, 1977) for stochastic biochemical simulation of enzyme production per cell - Propensity $a_j = k_j \times \prod[\text{reactants}]$, $a_j \propto$ Promoter Strength 
-- Reaction network for elemental reactions governing [E] and [S] per cell - `∅ →[k_synth]→ E` · `E →[k_deg]→ ∅` · `E+S →[k_cat]→ E+∅` 
-- ATP flux (Metabolic Trace) for first-order catalysis depleting substrate S - Propensity $a_2 = k_\text{cat} \times E$; S decrements per catalytic event
-- Force coupling for mean enzyme count to motor force - $F = F_\text{base} \times \langle E \rangle / E_\text{ref}$ 
-- Euler integrator for Kinematic trajectory from derived force - $x(t+1) = x(t) + F + \varepsilon,\quad \varepsilon \sim \mathcal{N}(0, \sigma^2)$ 
+## 1. What is this starter?
 
- 
-## Promoter Library
- 
-Anderson J23 series (iGEM Parts Registry), validated constitutive promoters spanning ~10× transcriptional activity range:
- 
-| Promoter | Relative strength | `k_synth` (mol/msec) | Typical `⟨E⟩` | Typical motor force |
-|:---------|:-----------------:|:--------------------:|:--------------:|:-------------------:|
-| J23100   | High  (1.00)      | 2.500                | ~9–12 mol      | ~0.9–1.2 µm/step   |
-| J23106   | Medium (0.47)     | 1.175                | ~4–6 mol       | ~0.4–0.6 µm/step   |
-| J23114   | Low (0.10)        | 0.250                | ~1–3 mol       | ~0.1–0.3 µm/step   |
- 
-Custom promoters: use `"promoter": "custom"` with an explicit `"k_synth"` value (e.g., from BRENDA or SABIO-RK kinetics databases).
- 
-## Workflow
- 
-Step 1 Specification: Select a promoter per cell and set the direction vector.
- 
-Step 2 Simulation via Gemini MCP client:
- 
+This repository is a framework for building **bioengineering automation tools** that an AI assistant can call via **MCP (Model Context Protocol)**.
+
+The framework handles connecting your Python codes to the AI.
+
+### Four design principles
+
+1. **You write pure Python** — biology logic only, no networking or MCP code required.  
+2. **Convention over configuration** — the framework auto-discovers your files by name.  
+3. **No plumbing in your tool files** — you never import MCP or registration code.  
+4. **Copy >> modify >> extend** — start from the examples and edit them.
+
+---
+
+## 2. Project structure
+
+```
+.
+├── server.py                      # MCP server — do not edit
+├── client_gemini.py               # Gemini CLI client — do not edit
+├── requirements.txt
+│
+├── tests/
+│   └── test_tools.py
+│
+└── modules/
+    ├── __init__.py                # Scans all sub-modules — do not edit
+    │
+    └── seq_basics/                # EXAMPLE MODULE (copy this for your project)
+        ├── __init__.py
+        ├── SKILL.md               # AI guidance for this module (optional)
+        ├── _utils.py              # Shared constants (codon table, etc.)
+        ├── _plumbing/             # Auto-registration internals — do not edit
+        │   ├── __init__.py
+        │   ├── register.py
+        │   └── resolve.py
+        ├── data/
+        │   └── pBR322.gb          # Sequence data files go here
+        └── tools/
+            ├── reverse_complement.py    # Example: Python implementation
+            ├── reverse_complement.json  # Example: C9 JSON wrapper
+            ├── translate.py
+            ├── translate.json
+            └── prompts.json             # Example test prompts
+```
+
+> **Where you spend your time:** `modules/<your_module>/tools/` and `modules/<your_module>/data/`.
+
+---
+
+## 3. How the pipeline works
+
 ```
 python client_gemini.py
- 
-You: Simulate a xenobot with a strong anterior motor (J23100) and a weak posterior
-     cell (J23114). Show the ATP depletion traces.
+        │
+        ├─► launches server.py as a subprocess
+        │         │
+        │         └─► scans modules/  (one folder per project)
+        │                   └─► for each folder: reads .py + .json pairs, registers tools
+        │                                         reads .gb / .fasta files, registers resources
+        │
+        ├─► connects to server, lists tools and resources
+        │
+You:    └─► type a request
+                │
+                ▼
+            Gemini decides which tool to call and with what arguments
+                │
+                ▼
+            server calls your Python function
+                │
+                ▼
+            result returned to Gemini, which explains it to you
 ```
- 
-Step 3 Analysis: Evaluate the Phenotypic and Metabolic Trace outputs against the design objective.
- 
-- Phenotypic Trace (Top panels) - cell trajectories + centroid with Δ annotation, compares net displacement across promoter configurations
-- Metabolic Trace (Bottom panels) - `[E](t)` solid + `S(t)` dashed per cell, assesses ATP efficiency and detect metabolic exhaustion (`S → 0` while `[E]` is high)
-- Ppromoter Strength per Micron - ratio of `k_synth` to `Δ`, minimized at optimal design
- 
-Trace interpretation:
- 
-- `[E]` at plateau, ATP slow decline - Healthy expression, motor near steady state
-- `[E]` fluctuating near 0–3 mol - Weak promoter, stochastic force dropout
-- ATP → 0, `[E]` sustained - Metabolic exhaustion, increase `atp_init` or reduce `k_cat`
-- `[E]` saturates fast, ATP drops sharply - High metabolic cost, evaluate efficiency ratio
 
- 
-## Parameters
- 
-| Parameter | Type | Default | Description |
-|:----------|:----:|:-------:|:------------|
-| `cells` | `list[dict]` | — | Cell specifications (schema below) |
-| `steps` | `int` | 50 | Kinematic integration steps |
-| `noise` | `float` | 0.05 | Biological noise σ (µm/step) |
-| `gillespie_t_end` | `float` | 10.0 | Biochemical sim window (msec) |
-| `base_motor` | `float` | 2.0 | Max force at `⟨E⟩ = E_ref` (µm/step) |
-| `atp_init` | `int` | 500 | Initial ATP molecules per cell |
- 
-Cell dict schema:
- 
+---
+
+## 4. Quick start
+
+### Step 0 — Prerequisites
+- Python 3.10 or newer
+- Visual Studio Code — [code.visualstudio.com](https://code.visualstudio.com)
+
+### Step 1 — Create a virtual environment
+
+Open a terminal in VS Code (`Terminal >> New Terminal`):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Mac / Linux
+# .venv\Scripts\activate         # Windows
+```
+
+You should see `(.venv)` at the start of your terminal line. Then install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Step 2 — Get your Gemini API key
+
+1. Go to **[https://aistudio.google.com/api-keys](https://aistudio.google.com/api-keys)**
+2. Sign in with your **UC Berkeley Google account** (free access is included).
+3. Click **"Create API Key"** and copy the key.
+4. In the project root folder, create a file named exactly **`.env`** containing:
+
+```
+GEMINI_API_KEY="paste_your_key_here"
+```
+
+> 🔴 **Security warning:** Never upload `.env` to GitHub. Ensure `.env` is listed in `.gitignore`. 
+Run this in your project folder: 
+> echo ".env" >> .gitignore
+
+### Step 3 — Run the client
+
+```bash
+python client_gemini.py
+```
+
+Expected output:
+```
+[server] Starting BioE234 MCP server...
+[register] ✓ Tool registered:    dna_reverse_complement
+[register] ✓ Tool registered:    dna_translate
+[register] ✓ Resource registered: pBR322  (...)
+[server] All modules registered. Server ready.
+
+Connected to MCP server.
+Discovered tools:
+  - dna_reverse_complement: Return the reverse complement of a DNA sequence...
+  - dna_translate: Translate DNA to protein...
+```
+
+Try typing:
+```
+Translate the first 60bp of pBR322 in frame 1
+```
+
+Then you should get:
+```
+Gemini: The first 60bp of pBR322 translated in frame 1 is FSCLTAYHR*ALMR*FITVK.
+```
+
+---
+
+## 5. Each tool is TWO files
+
+For every tool you build you create **two files with the same stem name** in your `tools/` folder:
+
+```
+gc_content.py     ← Python implementation (the biology logic)
+gc_content.json   ← C9 JSON wrapper      (the metadata / schema)
+```
+
+**There is no third "wrapper" file.** The `.json` file *is* your C9 wrapper. It is what the grading rubric means when it says "C9 Wrapper". The Python file holds only biology code — no MCP-specific code at all.
+
+---
+
+## 6. The Python file - Function Object Pattern
+
+Your Python file must follow the **Function Object Pattern**: a class with `initiate()` and `run()` methods, and a structured docstring. This is the same pattern used throughout the course.
+
+- **`initiate()`** — one-time setup (build lookup tables, load config, etc.)
+- **`run()`** — the actual computation; called once per tool invocation
+
+### Template
+
 ```python
+class GcContent:
+    """
+    Description:
+        Computes the fraction of G and C bases in a DNA sequence.
+
+    Input:
+        seq (str): DNA sequence (resource name or raw string).
+
+    Output:
+        float: GC fraction between 0.0 and 1.0.
+
+    Tests:
+        - Case:
+            Input: seq="ATGCATGC"
+            Expected Output: 0.5
+            Description: Balanced sequence, 50% GC.
+        - Case:
+            Input: seq="AAAA"
+            Expected Output: 0.0
+            Description: All A bases, 0% GC.
+        - Case:
+            Input: seq=""
+            Expected Output: 0.0
+            Description: Edge case — empty sequence returns 0.
+    """
+
+    def initiate(self) -> None:
+        pass   # nothing to set up for this tool
+
+    def run(self, seq: str) -> float:
+        """Return GC fraction between 0 and 1."""
+        seq = seq.upper()
+        gc = sum(1 for b in seq if b in "GC")
+        return gc / len(seq) if seq else 0.0
+
+
+# Optional: module-level alias so pytest can import the function directly.
+_instance = GcContent()
+_instance.initiate()
+gc_content = _instance.run   # gc_content("ATGC") → 0.5
+```
+
+### Naming rule — critical
+
+> ⚠️ **Name your file after what it does, not `bio_functions.py`.**  
+> If every student uses `bio_functions.py`, files will conflict.
+
+Good names: `gc_content.py`, `find_pam_sites.py`, `design_primers.py`, `codon_count.py`
+
+The **class name** can be anything descriptive. The **file name** is what you use in the JSON wrapper's `execution_details.source`.
+
+### Rules
+- Always add type hints: `seq: str`, `frame: int`, `pam: str = "NGG"`, etc.
+- Return JSON-serialisable values: `str`, `int`, `float`, `list`, `dict`.
+- Raise `ValueError` with clear messages for invalid inputs.
+- Never `print()` inside a tool — return values instead.
+
+---
+
+## 7. The JSON file — C9 wrapper
+
+The `.json` file formally describes your tool. It follows the schema in [`Function_Development_Specification.md`](Function_Development_Specification.md) and is what the grader evaluates as the "C9 Wrapper" component.
+
+### Template
+
+```json
 {
-    "promoter":    str,    # "J23100" | "J23106" | "J23114" | "custom"   (required)
-    "direction_x": float,  # motor direction unit vector x               (default 1.0)
-    "direction_y": float,  # motor direction unit vector y               (default 0.0)
-    "label":       str,    # plot legend label                           (optional)
-    "k_synth":     float,  # synthesis rate override for "custom"        (optional)
+  "id": "org.bioe234.function.seq.gc_content.v1",
+  "name": "DNA GC Content",
+  "description": "Compute the GC content (fraction of G and C bases) of a DNA sequence.",
+  "type": "function",
+  "keywords": ["DNA", "GC content", "sequence analysis"],
+  "date_created": null,
+  "date_last_modified": null,
+
+  "inputs": [
+    {
+      "name": "seq",
+      "type": "string",
+      "description": "DNA sequence. Accepts a resource name (e.g. 'pBR322') or a raw sequence string."
+    }
+  ],
+
+  "outputs": [
+    {
+      "type": "number",
+      "description": "GC fraction between 0.0 (no GC) and 1.0 (all GC)."
+    }
+  ],
+
+  "examples": [
+    {
+      "input":  { "seq": "ATGCATGC" },
+      "output": { "result": 0.5 }
+    },
+    {
+      "input":  { "seq": "AAAA" },
+      "output": { "result": 0.0 }
+    }
+  ],
+
+  "execution_details": {
+    "language": "Python",
+    "source": "modules/seq_basics/tools/gc_content.py",
+    "initialization": "initiate",
+    "execution": "run",
+    "disposal": null,
+
+    "mcp_name": "dna_gc_content",
+    "seq_params": ["seq"]
+  }
 }
 ```
- 
-## Project Structure
- 
+
+### Required fields
+
+| Field | Notes |
+|-------|-------|
+| `id` | Unique ID in the format `org.bioe234.function.<domain>.<name>.v1` |
+| `name` | Human-readable display name |
+| `description` | One clear sentence describing what the tool does |
+| `type` | Always `"function"` |
+| `keywords` | List of relevant terms |
+| `inputs` | Array — each entry needs `name`, `type`, `description` |
+| `outputs` | Array — each entry needs `type`, `description` |
+| `examples` | Array — at least one `{input, output}` pair |
+| `execution_details.language` | `"Python"` |
+| `execution_details.source` | Path to your `.py` file |
+| `execution_details.execution` | `"run"` |
+| `execution_details.mcp_name` | The tool identifier Gemini will use (snake_case) |
+
+`execution_details.mcp_name` and `execution_details.seq_params` are framework-specific extensions — they exist inside `execution_details` because they are about how your code runs, not what it does biologically.
+
+### Supported input/output types
+`string`, `integer`, `number`, `boolean`, `array`, `object`
+
+---
+
+## 8. Tools with multiple input parameters
+
+```python
+# hamming_distance.py
+class HammingDistance:
+    def initiate(self): pass
+    def run(self, seq1: str, seq2: str) -> int:
+        if len(seq1) != len(seq2):
+            raise ValueError("Sequences must have equal length.")
+        return sum(a != b for a, b in zip(seq1, seq2))
 ```
-modules/xenobot_project/
-├── SKILL.md               # Gemini domain guidance with promoter library and design patterns
-├── README.md              # This file describing project
-└── tools/
-    ├── xenobot_sim.py     # XenobotSim: Gillespie SSA + Euler kinematic integrator
-    ├── xenobot_sim.json   # C9 function wrapper: schema, typed I/O, MCP entry points
-    ├── prompts.json       # Evaluation prompts with expected_tool and expected_args
-    └── test_xenobot.py    # pytest validation suite
+
+In your JSON, list both names under `seq_params`:
+
+```json
+"execution_details": {
+  ...,
+  "mcp_name": "dna_hamming_distance",
+  "seq_params": ["seq1", "seq2"]
+}
 ```
- 
-## Future Directions
-- Inducible circuits - `k_synth` as a function of inducer concentration (e.g., Tet-OFF). oscillatory expression via the Repressilator (Elowitz & Leibler, 2000) for gait-like locomotion.
-- Full Michaelis-Menten kinetics - Replace first-order ATP reaction with the elemental MM network (`E + S ⇌ ES → E + P`) for substrate-saturation effects and Kₘ-targeted enzyme engineering.
-- Evolutionary design optimization - Use `run()` as a forward model in a Kriegman-style (2020) optimization loop to solve the inverse problem: minimize ATP cost for a target displacement.
-- 3D morphology - Extend the kinematic layer to three dimensions; model the xenobot body as a spring graph for mechanical coupling between adjacent cells.
+
+Both `seq1` and `seq2` can be resource names or raw sequences.
+
+---
+
+## 9. Non-sequence tools
+
+If your tool does not take a DNA/RNA sequence, **omit `seq_params`** entirely:
+
+```python
+# restriction_site_count.py
+class RestrictionSiteCount:
+    def initiate(self): pass
+    def run(self, dna: str, site: str) -> int:
+        return dna.upper().count(site.upper())
+```
+
+```json
+"execution_details": {
+  "language": "Python",
+  "source": "modules/seq_basics/tools/restriction_site_count.py",
+  "initialization": "initiate",
+  "execution": "run",
+  "mcp_name": "dna_restriction_site_count"
+}
+```
+
+---
+
+## 10. How sequences are resolved automatically
+
+When a parameter is listed in `seq_params`, the framework automatically converts it before your `run()` is called:
+
+| What you pass | What `run()` receives |
+|---|---|
+| `"pBR322"` | Full 4361bp sequence string |
+| `">seq1\nATGC..."` | `"ATGC"` |
+| `"LOCUS pBR322 ..."` | Full sequence string |
+| `"ATGCGATCG"` | `"ATGCGATCG"` |
+| `"ATG CGA\n1 TCG"` | `"ATGCGATCG"` (whitespace/numbers stripped) |
+
+Your function always receives a clean uppercase string. No file parsing needed.
+
+---
+
+## 11. Adding sequence data files
+
+Drop `.gb` or `.fasta` files into `modules/<your_module>/data/`. Restart the server and they are immediately available as resources.
+
+```
+data/
+  pBR322.gb       →  resource name "pBR322"
+  mg1655.fasta    →  resource name "mg1655"
+```
+
+---
+
+## 12. Test prompts — prompts.json
+
+You must submit a `prompts.json` file alongside your tool. Each entry is a natural-language prompt a user might type, paired with the expected tool call. See `modules/seq_basics/tools/prompts.json` for the exact format.
+
+```json
+[
+  {
+    "prompt": "What is the GC content of ATGCATGC?",
+    "expected_tool": "dna_gc_content",
+    "expected_args": { "seq": "ATGCATGC" },
+    "notes": "Basic raw sequence input."
+  }
+]
+```
+
+---
+## 13. SKILL.md — Guiding the AI
+
+Each module can contain a `SKILL.md` file. When found, its contents are automatically
+injected into Gemini's system prompt at startup, giving the AI background knowledge
+it needs to use your tools correctly.
+
+**Is it required?** No. The system works without it. But without it, Gemini has only the
+short `description` fields from your `.json` wrappers to go on. A good `SKILL.md`
+meaningfully improves the quality of Gemini's responses — it knows what your resources
+contain, how to interpret results, and what edge cases to watch for.
+
+**What to put in it:**
+- What the module does in one paragraph
+- A table of your resources and what they contain
+- For each tool: when to use it, what the parameters mean, how to interpret the output
+- Any domain vocabulary or biological context Gemini needs
+
+**Template** — create `modules/<your_module>/SKILL.md`:
+
+```markdown
+# <your_module> — Skill Guidance for Gemini
+
+## What this module does
+One paragraph describing the biological domain and purpose of this module.
+
+## Available resources
+| Resource name | Description |
+|---------------|-------------|
+| `my_genome`   | E. coli K-12 MG1655 complete genome, 4.6 Mbp. |
+
+## Tools and when to use them
+
+### `my_tool_mcp_name`
+What it computes and when Gemini should call it.
+- Trigger phrases: "find X", "scan for Y", "does this sequence contain Z"
+- Parameter notes: what each parameter means in plain language
+- Output notes: how to interpret the result
+
+## Interpreting results
+Any domain knowledge that helps Gemini explain results correctly.
+```
+
+**See `modules/seq_basics/SKILL.md` for a complete working example.**
+
+> **Token budget:** SKILL.md is included in every request. Keep it under ~300 lines.
+> Long files increase cost and can push other context out of Gemini's window.
+
+---
+
+
+
+## 14. Creating your own module
+
+```
+modules/
+  <your_module>/
+    __init__.py          ← copy from seq_basics/ (can be empty)
+    SKILL.md             ← describe what this module does for the AI
+    data/
+      my_genome.gb       ← example data
+    tools/
+      find_pam.py        ← example tool 1
+      find_pam.json      ← example json file for tool 1
+      prompts.json       ← example tool 2
+      test_find_pam.py   ← example json file for tool 2
+```
+
+`modules/__init__.py` auto-discovers new folders — you do not need to edit it.
+
+---
+
+## 15. Running tests
+
+```bash
+pytest -vv -l
+```
+
+Write tests that cover both typical inputs and edge cases. See `tests/test_tools.py` for examples — it shows how to test both the class directly and via the module-level alias.
+
+---
+
+## 16. What to submit
+
+| File | Grading component |
+|------|------------------|
+| `<tool_name>.py` | Function Code |
+| `<tool_name>.json` | C9 Wrapper |
+| `prompts.json` | Test Prompts |
+| `test_<tool_name>.py` | Pytest |
+| `README.md` | Documentation |
+| `<your_functions_docs>.md` | Theory Docs |
+
+Submit your GitHub repo URL on bCourses. The repo should reflect your **individual** contribution, not the whole team's work.
+
+---
+
+## 17. Troubleshooting
+
+**Tool doesn't appear after startup**  
+Look for `[register] WARNING` lines in the terminal. The message will say exactly what is missing — usually a `.json` wrapper file, a missing `run()` method, or a malformed JSON.
+
+**API key error**  
+Ensure `.env` is in the project root (not a subfolder) and contains `GEMINI_API_KEY="..."`. Restart the terminal after creating the file.
+
+**Gemini 503**  
+Server busy. Wait 30 seconds — the client retries automatically.
+
+**`python` not found**  
+Use `python3` on Mac/Linux.
+
+**`ModuleNotFoundError`**  
+Activate your virtual environment first: `source .venv/bin/activate`.
+
+---
+
+## Still stuck?
+
+Email your TA: **javadamn@berkeley.edu**
